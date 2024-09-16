@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const ProductManager = require('./ProductManager');
 const CartManager = require('./CartManager');
 
@@ -8,59 +9,78 @@ const cartManager = new CartManager();
 
 app.use(express.json());
 
-// Routes for products
-app.get('/api/products', (req, res) => {
-    const { limit } = req.query;
-    const products = productManager.getProducts(limit ? parseInt(limit) : undefined);
-    res.json(products);
-});
+// Connect to MongoDB
+mongoose.connect('mongodb://localhost:27017/ecommerce', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+}).then(() => console.log("MongoDB connected"))
+  .catch(err => console.error(err));
 
-app.get('/api/products/:pid', (req, res) => {
-    const product = productManager.getProductById(parseInt(req.params.pid));
-    if (!product) return res.status(404).send('Product not found');
-    res.json(product);
-});
+// Route to get paginated, filtered, and sorted products
+app.get('/api/products', async (req, res) => {
+    const { limit = 10, page = 1, sort, query } = req.query;
+    
+    const filter = query ? { category: query } : {};  // Example: filtering by category
+    const options = {
+        limit: parseInt(limit),
+        page: parseInt(page),
+        sort: sort ? { price: sort === 'asc' ? 1 : -1 } : {},  // Sorting by price
+    };
 
-app.post('/api/products', (req, res) => {
-    const { title, description, code, price, stock, category, thumbnails = [] } = req.body;
-    if (!title || !description || !code || !price || !stock || !category) {
-        return res.status(400).send('All fields except thumbnails are required');
+    try {
+        const products = await productManager.getPaginatedProducts(filter, options);
+        res.json({
+            status: 'success',
+            payload: products.docs,
+            totalPages: products.totalPages,
+            prevPage: products.hasPrevPage ? products.prevPage : null,
+            nextPage: products.hasNextPage ? products.nextPage : null,
+            page: products.page,
+            hasPrevPage: products.hasPrevPage,
+            hasNextPage: products.hasNextPage,
+            prevLink: products.hasPrevPage ? `/api/products?limit=${limit}&page=${products.prevPage}` : null,
+            nextLink: products.hasNextPage ? `/api/products?limit=${limit}&page=${products.nextPage}` : null,
+        });
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: error.message });
     }
-
-    const newProduct = productManager.addProduct({ title, description, code, price, stock, category, thumbnails });
-    res.status(201).json(newProduct);
 });
 
-app.put('/api/products/:pid', (req, res) => {
-    const updatedProduct = productManager.updateProduct(parseInt(req.params.pid), req.body);
-    if (!updatedProduct) return res.status(404).send('Product not found');
-    res.json(updatedProduct);
+// Product endpoints remain unchanged
+
+// Cart endpoints
+
+app.get('/api/carts/:cid', async (req, res) => {
+    try {
+        const cart = await cartManager.getCartByIdWithProducts(req.params.cid);
+        if (!cart) return res.status(404).send('Cart not found');
+        res.json(cart);
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
 });
 
-app.delete('/api/products/:pid', (req, res) => {
-    const deletedProduct = productManager.deleteProduct(parseInt(req.params.pid));
-    if (!deletedProduct) return res.status(404).send('Product not found');
-    res.json(deletedProduct);
+app.put('/api/carts/:cid', async (req, res) => {
+    const { products } = req.body;
+    try {
+        const updatedCart = await cartManager.updateCart(req.params.cid, products);
+        if (!updatedCart) return res.status(404).send('Cart not found');
+        res.json(updatedCart);
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
 });
 
-
-app.post('/api/carts', (req, res) => {
-    const newCart = cartManager.createCart();
-    res.status(201).json(newCart);
+// Delete all products from cart
+app.delete('/api/carts/:cid', async (req, res) => {
+    try {
+        const deletedCart = await cartManager.clearCart(req.params.cid);
+        if (!deletedCart) return res.status(404).send('Cart not found');
+        res.json(deletedCart);
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
 });
-
-app.get('/api/carts/:cid', (req, res) => {
-    const cart = cartManager.getCartById(parseInt(req.params.cid));
-    if (!cart) return res.status(404).send('Cart not found');
-    res.json(cart);
-});
-
-app.post('/api/carts/:cid/product/:pid', (req, res) => {
-    const cart = cartManager.addProductToCart(parseInt(req.params.cid), parseInt(req.params.pid));
-    if (!cart) return res.status(404).send('Cart not found');
-    res.json(cart);
-});
-
 
 app.listen(8080, () => {
     console.log('Server is running on port 8080');
