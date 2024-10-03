@@ -1,31 +1,29 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const ProductManager = require('./ProductManager');
-const CartManager = require('./routes/carts');
-const { authMiddleware } = require('./middleware/authMiddleware');
-const cartRoutes = require('./routes/carts');
+const productRoutes = require('routes/products'); // Certifique-se de que o caminho está correto
 
 const app = express();
-const productManager = new ProductManager();
-const cartManager = new CartManager();
+const PORT = 8080;
 
-app.use(express.json());
-
-// Connect to MongoDB
-mongoose.connect('mongodb://localhost:27017/ecommerce', {
+// Conectar ao MongoDB
+mongoose.connect('mongodb://localhost:27017/seuBancoDeDados', {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-}).then(() => console.log("MongoDB connected"))
-  .catch(err => console.error(err));
+})
+.then(() => {
+    console.log('MongoDB conectado!');
+})
+.catch(err => {
+    console.error('Erro ao conectar ao MongoDB:', err);
+});
 
-// Middleware de autenticação
-app.use(authMiddleware);
+// Middleware para permitir o uso de JSON nas requisições
+app.use(express.json());
 
-// Rotas
-app.use('/api/carts', cartRoutes);
+// Definindo as rotas de produtos
+app.use('/api/products', productRoutes);
 
-// Outras rotas...
-
-app.listen(8080, () => {
-    console.log('Server is running on port 8080');
+// Iniciando o servidor
+app.listen(PORT, () => {
+    console.log(`Servidor rodando na porta ${PORT}`);
 });

@@ -1,4 +1,4 @@
-const Product = require('../models/Product');  // Assuming Mongoose schema
+const Product = require('../routes/Product');  // Assuming Mongoose schema
 
 class ProductDAO {
     async getPaginatedProducts(filter, options) {

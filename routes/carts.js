@@ -2,11 +2,14 @@ const express = require('express');
 const CartRepository = require('../repositories/CartRepository');
 const TicketService = require('../services/TicketService');
 const { userMiddleware } = require('../middleware/authMiddleware');
+const ProductManager = require('../repositories/ProductManager'); // Adicione a importação do ProductManager
 
 const router = express.Router();
 const cartRepository = new CartRepository();
 const ticketService = new TicketService();
+const productManager = new ProductManager(); // Inicialize o ProductManager
 
+// Rota para comprar produtos do carrinho
 router.post('/:cid/purchase', userMiddleware, async (req, res) => {
     const cartId = req.params.cid;
     const cart = await cartRepository.getCartById(cartId);
@@ -18,7 +21,7 @@ router.post('/:cid/purchase', userMiddleware, async (req, res) => {
 
     for (const item of cart.products) {
         const product = await productManager.getProductById(item.product); // Assumindo que você tem um método para buscar produto por ID
-        if (product.stock >= item.quantity) {
+        if (product && product.stock >= item.quantity) {
             totalAmount += product.price * item.quantity;
             product.stock -= item.quantity; // Atualiza o estoque
             await product.save(); // Salva a alteração
