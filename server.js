@@ -1,22 +1,20 @@
 const express = require('express');
-const mongoose = require('mongoose');
-const productRoutes = require('./models/Product')
+const connectDB = require('./src/config/dbConfig'); // Configuração do banco
+const productRoutes = require('./src/routes/carts'); // Caminho correto para as rotas
 
 const app = express();
 const PORT = 8080;
 
-mongoose.connect('mongodb://localhost:27017/seuBancoDeDados')
-    .then(() => {
-        console.log('MongoDB conectado!');
-    })
-    .catch(err => {
-        console.error('Erro ao conectar ao MongoDB:', err);
-    });
+// Conectar ao MongoDB
+connectDB();
 
+// Middleware para permitir JSON no corpo das requisições
 app.use(express.json());
 
+// Rotas
 app.use('/api/products', productRoutes);
 
+// Inicialização do servidor
 app.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);
 });

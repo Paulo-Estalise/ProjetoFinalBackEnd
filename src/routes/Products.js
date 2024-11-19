@@ -1,5 +1,5 @@
 const express = require('express');
-const ProductManager = require('../repositories/ProductManager'); // Ajuste o caminho se necessário
+const ProductManager = require('../../repositories/ProductManager'); // Ajuste o caminho se necessário
 const router = express.Router();
 
 const productManager = new ProductManager();

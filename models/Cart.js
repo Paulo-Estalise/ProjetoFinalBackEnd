@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const CartRepository = require('../repositories/CartRepository');
+
 
 const cartSchema = new mongoose.Schema({
     products: [{
